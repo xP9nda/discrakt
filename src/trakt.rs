@@ -122,4 +122,34 @@ impl Trakt {
             }
         }
     }
+
+    pub fn get_episode_rating(&mut self, show_slug: String, season_num: String, episode_num: String) -> Option<f64> {
+        match self.cache.get(&show_slug) {
+            Some(rating) => Some(*rating),
+            None => {
+                let endpoint = format!("https://api.trakt.tv/shows/{}/seasons/{}/episodes/{}/ratings", show_slug, season_num,episode_num);
+
+                let response = match self
+                    .agent
+                    .get(&endpoint)
+                    .set("Content-Type", "application/json")
+                    .set("trakt-api-version", "2")
+                    .set("trakt-api-key", &self.client_id)
+                    .call()
+                {
+                    Ok(response) => response,
+                    Err(_) => return Some(0.0),
+                };
+
+                match response.into_json() {
+                    Ok(body) => {
+                        let body: TraktRatingsResponse = body;
+                        self.cache.insert(show_slug.to_string(), body.rating);
+                        Some(body.rating)
+                    }
+                    Err(_) => Some(0.0),
+                }
+            }
+        }
+    }
 }
