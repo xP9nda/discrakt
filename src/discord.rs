@@ -46,10 +46,14 @@ impl Discord {
         let details;
         let state;
         let media;
+
         let link_imdb;
-        let link_trakt;
         let text_imdb;
+        let mut imdb_known = false;
+
+        let link_trakt;
         let text_trakt;
+
         let rating_text;
         let start_date = DateTime::parse_from_rfc3339(&trakt_response.started_at).unwrap();
         let end_date = DateTime::parse_from_rfc3339(&trakt_response.expires_at).unwrap();
@@ -66,24 +70,12 @@ impl Discord {
                 details = format!("{}", movie.title);
                 state = format!("📅 {}", movie.year);
 
-                rating_text = format!(
-                    "⭐️ {:.1}/10",
-                    Trakt::get_movie_rating(trakt, movie.ids.slug.as_ref().unwrap().to_string())
-                        .as_ref()
-                        .unwrap()
-                );
+                rating_text = format!("⭐️ {:.1}/10", Trakt::get_movie_rating(trakt, movie.ids.slug.as_ref().unwrap().to_string()).as_ref().unwrap());
 
                 media = "movies";
-                link_imdb = format!(
-                    "https://www.imdb.com/title/{}",
-                    movie.ids.imdb.as_ref().unwrap()
-                );
+                link_imdb = format!("https://www.imdb.com/title/{}", movie.ids.imdb.as_ref().unwrap());
                 text_imdb = "View movie on IMDB";
-                link_trakt = format!(
-                    "https://trakt.tv/{}/{}",
-                    media,
-                    movie.ids.slug.as_ref().unwrap()
-                );
+                link_trakt = format!("https://trakt.tv/{}/{}", media, movie.ids.slug.as_ref().unwrap());
                 text_trakt = "View movie on Trakt";
             }
             "episode" if trakt_response.episode.is_some() => {
@@ -100,24 +92,22 @@ impl Discord {
 
                 state = format!("{}x{} \"{}\"", episode.season, &epsstring, episode.title);
 
-                rating_text = format!(
-                    "⭐️ {:.1}/10",
-                    Trakt::get_episode_rating(trakt, show.ids.slug.as_ref().unwrap().to_string(), episode.season.to_string(), episode.number.to_string())
-                        .as_ref()
-                        .unwrap()
-                );
+                rating_text = format!("⭐️ {:.1}/10", Trakt::get_episode_rating(trakt, show.ids.slug.as_ref().unwrap().to_string(), episode.season.to_string(), episode.number.to_string()).as_ref().unwrap());
+
+                if let None = show.ids.imdb {
+                    imdb_known = false;
+                    link_imdb = " ".to_string();
+                    text_imdb = " ";
+
+                    log("Show not found on IMDB");
+                } else {
+                    imdb_known = true;
+                    link_imdb = format!("https://www.imdb.com/title/{}", show.ids.imdb.as_ref().unwrap());
+                    text_imdb = "View show on IMDB";
+                }
 
                 media = "shows";
-                link_imdb = format!(
-                    "https://www.imdb.com/title/{}",
-                    show.ids.imdb.as_ref().unwrap()
-                );
-                text_imdb = "View show on IMDB";
-                link_trakt = format!(
-                    "https://trakt.tv/{}/{}",
-                    media,
-                    show.ids.slug.as_ref().unwrap()
-                );
+                link_trakt = format!("https://trakt.tv/{}/{}", media, show.ids.slug.as_ref().unwrap());
                 text_trakt = "View show on Trakt";
             }
             _ => {
@@ -128,25 +118,49 @@ impl Discord {
 
         log(&format!("{details} - {state} | {watch_percentage}"));
 
-        let payload = Activity::new()
-            .details(&details)
-            .state(&state)
-            .assets(
-                Assets::new()
-                    .large_image(media)
-                    .large_text(&watch_text)
-                    .small_image("rating")
-                    .small_text(&rating_text),
-            )
-            .timestamps(
-                Timestamps::new()
-                    .start(start_date.timestamp())
-                    .end(end_date.timestamp()),
-            )
-            .buttons(vec![
-                Button::new(&text_imdb, &link_imdb),
-                Button::new(&text_trakt, &link_trakt),
+        // alter the payload depending on if the show can be found on IMDB
+        let payload;
+
+        if imdb_known == true {
+            payload = Activity::new()
+                .details(&details)
+                .state(&state)
+                .assets(
+                    Assets::new()
+                        .large_image(media)
+                        .large_text(&watch_text)
+                        .small_image("rating")
+                        .small_text(&rating_text),
+                )
+                .timestamps(
+                    Timestamps::new()
+                        .start(start_date.timestamp())
+                        .end(end_date.timestamp()),
+                )
+                .buttons(vec![
+                    Button::new(&text_imdb, &link_imdb),
+                    Button::new(&text_trakt, &link_trakt),
             ]);
+        } else {
+            payload = Activity::new()
+                .details(&details)
+                .state(&state)
+                .assets(
+                    Assets::new()
+                        .large_image(media)
+                        .large_text(&watch_text)
+                        .small_image("rating")
+                        .small_text(&rating_text),
+                )
+                .timestamps(
+                    Timestamps::new()
+                        .start(start_date.timestamp())
+                        .end(end_date.timestamp()),
+                )
+                .buttons(vec![
+                    Button::new(&text_trakt, &link_trakt),
+            ]);
+        };
 
         if self.client.set_activity(payload).is_err() {
             self.connect();
