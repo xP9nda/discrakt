@@ -73,8 +73,19 @@ impl Discord {
                 rating_text = format!("⭐️ {:.1}/10", Trakt::get_movie_rating(trakt, movie.ids.slug.as_ref().unwrap().to_string()).as_ref().unwrap());
 
                 media = "movies";
-                link_imdb = format!("https://www.imdb.com/title/{}", movie.ids.imdb.as_ref().unwrap());
-                text_imdb = "View movie on IMDB";
+
+                if let None = movie.ids.imdb {
+                    imdb_known = false;
+                    link_imdb = " ".to_string();
+                    text_imdb = " ";
+
+                    log("Movie not found on IMDB");
+                } else {
+                    imdb_known = true;
+                    link_imdb = format!("https://www.imdb.com/title/{}", movie.ids.imdb.as_ref().unwrap());
+                    text_imdb = "View movie on IMDB";
+                }
+
                 link_trakt = format!("https://trakt.tv/{}/{}", media, movie.ids.slug.as_ref().unwrap());
                 text_trakt = "View movie on Trakt";
             }
