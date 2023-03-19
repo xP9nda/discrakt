@@ -57,12 +57,6 @@ impl Discord {
         let rating_text;
         let start_date = DateTime::parse_from_rfc3339(&trakt_response.started_at).unwrap();
         let end_date = DateTime::parse_from_rfc3339(&trakt_response.expires_at).unwrap();
-        let now = Utc::now();
-        let percentage = now.signed_duration_since(start_date).num_seconds() as f32
-            / end_date.signed_duration_since(start_date).num_seconds() as f32;
-        let watch_percentage = format!("{:.2}%", percentage * 100.0);
-        let watch_percentage_remaining = format!("{:.2}%", 100.0 - (percentage * 100.0));
-        let watch_text = format!("{} watched | {} remaining", watch_percentage, watch_percentage_remaining);
 
         match trakt_response.r#type.as_str() {
             "movie" => {
@@ -139,7 +133,6 @@ impl Discord {
                 .assets(
                     Assets::new()
                         .large_image(media)
-                        .large_text(&watch_text)
                         .small_image("rating")
                         .small_text(&rating_text),
                 )
@@ -151,6 +144,8 @@ impl Discord {
                 .buttons(vec![
                     Button::new(&text_imdb, &link_imdb),
                     Button::new(&text_trakt, &link_trakt),
+                    Button::new("View my profile", "https://trakt.tv/users/xp9nda"),
+                    Button::new("View my watch history", "https://trakt.tv/users/xp9nda/history"),
             ]);
         } else {
             payload = Activity::new()
@@ -159,7 +154,6 @@ impl Discord {
                 .assets(
                     Assets::new()
                         .large_image(media)
-                        .large_text(&watch_text)
                         .small_image("rating")
                         .small_text(&rating_text),
                 )
@@ -170,6 +164,8 @@ impl Discord {
                 )
                 .buttons(vec![
                     Button::new(&text_trakt, &link_trakt),
+                    Button::new("View my profile", "https://trakt.tv/users/xp9nda"),
+                    Button::new("View my watch history", "https://trakt.tv/users/xp9nda/history"),
             ]);
         };
 
