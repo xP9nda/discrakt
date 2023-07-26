@@ -60,6 +60,7 @@ impl Discord {
 
         match trakt_response.r#type.as_str() {
             "movie" => {
+                log("movie");
                 let movie = trakt_response.movie.as_ref().unwrap();
                 details = format!("{}", movie.title);
                 state = format!("📅 {}", movie.year);
@@ -84,6 +85,7 @@ impl Discord {
                 text_trakt = "View movie on Trakt";
             }
             "episode" if trakt_response.episode.is_some() => {
+                log("episode");
                 let episode = trakt_response.episode.as_ref().unwrap();
                 let show = trakt_response.show.as_ref().unwrap();
                 details = show.title.to_string();
@@ -121,12 +123,11 @@ impl Discord {
             }
         }
 
-        log(&format!("{details} - {state} | {watch_percentage}"));
-
         // alter the payload depending on if the show can be found on IMDB
         let payload;
 
         if imdb_known == true {
+            log("payload set (imdb known)");
             payload = Activity::new()
                 .details(&details)
                 .state(&state)
@@ -140,14 +141,15 @@ impl Discord {
                     Timestamps::new()
                         .start(start_date.timestamp())
                         .end(end_date.timestamp()),
-                )
-                .buttons(vec![
-                    Button::new(&text_imdb, &link_imdb),
-                    Button::new(&text_trakt, &link_trakt),
-                    Button::new("View my profile", "https://trakt.tv/users/xp9nda"),
-                    Button::new("View my watch history", "https://trakt.tv/users/xp9nda/history"),
-            ]);
+                );
+            //     .buttons(vec![
+            //         Button::new(&text_imdb, &link_imdb),
+            //         Button::new(&text_trakt, &link_trakt),
+            //         Button::new("View my profile", "https://trakt.tv/users/xp9nda"),
+            //         Button::new("View my watch history", "https://trakt.tv/users/xp9nda/history"),
+            // ]);
         } else {
+            log("payload set (no imdb)");
             payload = Activity::new()
                 .details(&details)
                 .state(&state)
@@ -161,14 +163,15 @@ impl Discord {
                     Timestamps::new()
                         .start(start_date.timestamp())
                         .end(end_date.timestamp()),
-                )
-                .buttons(vec![
-                    Button::new(&text_trakt, &link_trakt),
-                    Button::new("View my profile", "https://trakt.tv/users/xp9nda"),
-                    Button::new("View my watch history", "https://trakt.tv/users/xp9nda/history"),
-            ]);
+                );
+            //     .buttons(vec![
+            //         Button::new(&text_trakt, &link_trakt),
+            //         Button::new("View my profile", "https://trakt.tv/users/xp9nda"),
+            //         Button::new("View my watch history", "https://trakt.tv/users/xp9nda/history"),
+            // ]);
         };
 
+        log("connect check");
         if self.client.set_activity(payload).is_err() {
             self.connect();
         }

@@ -31,6 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         sleep(Duration::from_secs(15));
 
+        log("Response check");
         let response = match Trakt::get_watching(&trakt) {
             Some(response) => response,
             None => {
@@ -40,7 +41,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 continue;
             }
         };
-
+        
+        log("Discord set activity");
         Discord::set_activity(&mut discord, &response, &mut trakt);
     }
 }
